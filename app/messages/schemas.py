@@ -17,3 +17,8 @@ class MessageRead(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+
+class ChatResponse(BaseModel):
+    user_message: MessageRead
+    assistant_message: MessageRead

@@ -2,16 +2,24 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
+from app.auth.rate_limit import check_rate_limit
 from app.chats.service import get_user_chat_by_id
+from app.core.config import settings
 from app.db.database import get_db
-from app.messages.schemas import MessageCreate, MessageRead
-from app.messages.service import create_user_message, get_chat_messages
 from app.models.user import User
+from app.ai.factory import ai_client
+from app.messages.schemas import ChatResponse, MessageCreate, MessageRead
+from app.messages.service import (
+    create_assistant_message,
+    create_user_message,
+    get_chat_messages,
+    get_recent_chat_messages,
+)
 
 router = APIRouter(prefix="/chats/{chat_id}/messages", tags=["Messages"])
 
 
-@router.post("", response_model=MessageRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ChatResponse, status_code=status.HTTP_201_CREATED)
 async def create_message_endpoint(
     chat_id: int,
     data: MessageCreate,
@@ -26,7 +34,36 @@ async def create_message_endpoint(
             detail="Chat not found",
         )
 
-    return await create_user_message(db, chat.id, data)
+    await check_rate_limit(current_user)
+
+    user_message = await create_user_message(db, chat.id, data)
+
+    messages = await get_recent_chat_messages(
+        db=db,
+        chat_id=chat.id,
+        limit=settings.AI_CONTEXT_MESSAGES_LIMIT,
+    )
+
+    ai_messages = [
+        {
+            "role": message.role,
+            "content": message.content,
+        }
+        for message in messages
+    ]
+
+    ai_answer = await ai_client.generate_response(ai_messages)
+
+    assistant_message = await create_assistant_message(
+        db=db,
+        chat_id=chat.id,
+        content=ai_answer,
+    )
+
+    return ChatResponse(
+        user_message=user_message,
+        assistant_message=assistant_message,
+    )
 
 
 @router.get("", response_model=list[MessageRead])

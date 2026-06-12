@@ -1,8 +1,8 @@
 1: FastAPI + Docker + PostgreSQL <---- completed
 2: User/Auth/JWT <---- completed
 3: Chat CRUD <---- completed
-4: Message CRUD
-5: AI Client
+4: Message CRUD <---- completed
+5: AI Client <---- completed
 6: История сообщений
 7: Streaming
 8: Redis rate limit
