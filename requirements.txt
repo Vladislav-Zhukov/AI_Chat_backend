@@ -6,3 +6,8 @@ alembic
 pydantic-settings
 redis
 psycopg[binary]
+python-jose[cryptoraphy]
+passlib[argon2]
+argon2-cffi
+python-multipart
+email-validator

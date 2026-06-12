@@ -1,5 +1,5 @@
-1: FastAPI + Docker + PostgreSQL
-2: User/Auth/JWT
+1: FastAPI + Docker + PostgreSQL <---- completed
+2: User/Auth/JWT <---- completed
 3: Chat CRUD
 4: Message CRUD
 5: AI Client
