@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = ""
 
+    AI_CONTEXT_MESSAGES_LIMIT: int = 20
+
     RATE_LIMIT_MESSAGES: int = 20
     RATE_LIMIT_WINDOW_SECONDS: int = 60
 

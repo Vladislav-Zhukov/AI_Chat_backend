@@ -6,7 +6,7 @@ from app.models.user import User
 
 
 async def check_rate_limit(user: User) -> None:
-    key = f"rate_limit_{user.id}"
+    key = f"rate_limit:user:{user.id}"
 
     current_count = await redis_client.incr(key)
 
