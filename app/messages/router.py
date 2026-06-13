@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
@@ -81,3 +83,57 @@ async def get_messages_endpoint(
         )
 
     return await get_chat_messages(db, chat.id)
+
+
+@router.post("/stream")
+async def stream_message_endpoint(
+    chat_id: int,
+    data: MessageCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    chat = await get_user_chat_by_id(db, current_user.id, chat_id)
+
+    if chat is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chat not found",
+        )
+
+    await check_rate_limit(current_user)
+
+    user_message = await create_user_message(db, chat.id, data)
+
+    messages = await get_recent_chat_messages(
+        db=db,
+        chat_id=chat.id,
+        limit=settings.AI_CONTEXT_MESSAGES_LIMIT,
+    )
+
+    ai_messages = [
+        {
+            "role": message.role,
+            "content": message.content,
+        }
+        for message in messages
+    ]
+
+    async def event_generator():
+        full_answer = ""
+
+        async for chunk in ai_client.stream_response(ai_messages):
+            full_answer += chunk
+            yield f"data: {chunk}\n\n"
+
+        await create_assistant_message(
+            db=db,
+            chat_id=chat.id,
+            content=full_answer,
+        )
+
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+    )
