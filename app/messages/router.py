@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.db.database import get_db
 from app.models.user import User
 from app.ai.factory import ai_client
+from app.usage.service import create_usage_log
 from app.messages.schemas import ChatResponse, MessageCreate, MessageRead
 from app.messages.service import (
     create_assistant_message,
@@ -60,6 +61,14 @@ async def create_message_endpoint(
         db=db,
         chat_id=chat.id,
         content=ai_answer,
+    )
+
+    await create_usage_log(
+        db=db,
+        user_id=current_user.id,
+        chat_id=chat.id,
+        provider=settings.AI_PROVIDER,
+        model=settings.OPENAI_MODEL if settings.AI_PROVIDER == "openai" else "mock",
     )
 
     return ChatResponse(
@@ -129,6 +138,14 @@ async def stream_message_endpoint(
             db=db,
             chat_id=chat.id,
             content=full_answer,
+        )
+
+        await create_usage_log(
+            db=db,
+            user_id=current_user.id,
+            chat_id=chat.id,
+            provider=settings.AI_PROVIDER,
+            model=settings.OPENAI_MODEL if settings.AI_PROVIDER == "openai" else "mock",
         )
 
         yield "data: [DONE]\n\n"
